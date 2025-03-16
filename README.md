@@ -16,13 +16,13 @@
 - Веб-интерфейс -> app.py
 
 ## Описание инфраструктуры
-• Язык разработки: Python 3.11
-• Менеджмент версий python: venv
-• Система контроля версий кода: git
-• Линтер: flake8
-• Автоформаттер: black
-• Хранилище данных: PostgreSQL
-• Контейнеризация: Docker
-• API: FastAPI
-• Web-service: Streamlit
+- Язык разработки: Python 3.11
+- Менеджмент версий python: venv
+- Система контроля версий кода: git
+- Линтер: flake8
+- Автоформаттер: black
+- Хранилище данных: PostgreSQL
+- Контейнеризация: Docker
+- API: FastAPI
+- Web-service: Streamlit
 

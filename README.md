@@ -25,4 +25,8 @@
 - Контейнеризация: Docker
 - API: FastAPI
 - Web-service: Streamlit
+- 
+
+## Запуск API
+`uvicorn fast_api:app & npx localtunnel --port 8000 --subdomain fastapi & wget -q -O - https://loca.lt/mytunnelpassword`
 

@@ -1,7 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 import pickle
 import pandas as pd
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from sklearn.preprocessing import LabelEncoder
 from scipy.sparse import csr_matrix
@@ -26,7 +25,7 @@ class ModelStore:
         self.models: Dict[str, object] = {}
         self.models_info: Dict[str, ModelInfo] = {}
         self.lock = multiprocessing.Lock()
-        # self.active_model_id: Optional[str] = None
+        self.active_model_id: Optional[str] = None
         # self.label_encoders: Dict[str, LabelEncoder] = {}
 
 model_store = ModelStore()
@@ -183,3 +182,26 @@ async def get_models():
             info
             for model_id, info in model_store.models_info.items()
         ]
+
+@app.post("/set", response_model=dict)
+async def set_model(model_id: str):
+    with model_store.lock:
+        if model_id not in model_store.models_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Model not found"
+            )
+
+        if model_id not in model_store.models:
+            try:
+                with open(model_store.models_info[model_id].model_path, 'rb') as f:
+                    model_store.models[model_id] = pickle.load(f)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Model loading failed"
+                )
+
+        model_store.active_model_id = model_id
+
+    return {"status": "success", "active_model_id": model_id}

@@ -13,19 +13,23 @@ from datetime import datetime
 import time
 from pathlib import Path
 import uuid
+from typing import List, Dict, Optional
+from patterns import FitRequest, ModelInfo
 
 TRAIN = f"../train.csv"
 train_df = pd.read_csv(TRAIN)
 
-class FitRequest(BaseModel):
-    model_name: str
-    model_type: str
-    factors: int = 100
-    iterations: int = 20
-    regularization: float = 0.01
-    alpha: float = 1.0
 
 ml_models = {}
+class ModelStore:
+    def __init__(self):
+        self.models: Dict[str, object] = {}
+        self.models_info: Dict[str, ModelInfo] = {}
+        self.lock = multiprocessing.Lock()
+        # self.active_model_id: Optional[str] = None
+        # self.label_encoders: Dict[str, LabelEncoder] = {}
+
+model_store = ModelStore()
 
 def get_als_data(train_df):
     le_msno = LabelEncoder()
@@ -56,6 +60,13 @@ def music_recommendation(user_id, n=10):
 
     recommendations = loaded_model.recommend(user_id, matrix[user_id], N=n)
     res = le_song_id.inverse_transform(recommendations[0].tolist())
+
+    model_store.models["default_als"] = loaded_model
+    model_store.models_info["default_als"] = ModelInfo(
+                    model_id="default",
+                    params={"type": "ALS"},
+                )
+    
     return list(res)
     
 @asynccontextmanager
@@ -138,11 +149,19 @@ async def fit_model(request: FitRequest):
         }
 
 
-    if not Path(f"users_models/{request.model_name}_{request.params.model_type}_{model_id}.pkl").exists():
+    if not Path(f"users_models/{request.model_name}_{request.model_type}_{model_id}.pkl").exists():
         return {
             "status": "error",
             "message": "Training failed"
         }
+    
+    with model_store.lock:
+        model_store.models_info[model_id] = ModelInfo(
+            model_id=model_id,
+            params=request.dict(),
+            model_path=f"users_models/{request.model_name}_{request.model_type}_{model_id}.pkl"
+        )
+
 
     return {
         "status": "success",
@@ -154,3 +173,13 @@ async def fit_model(request: FitRequest):
         },
         "message": "Model trained and saved"
     }
+
+
+
+@app.get("/models", response_model=List[ModelInfo])
+async def get_models():
+    """Список текущих моделей"""
+    return [
+            info
+            for model_id, info in model_store.models_info.items()
+        ]

@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 import uuid
 from typing import List, Dict, Optional
-from patterns import FitRequest, ModelInfo
+from patterns import FitRequest, ModelInfo, FitResponse, SetResponse, ErrorResponse, PredictResponse
 
 TRAIN = f"../train.csv"
 train_df = pd.read_csv(TRAIN)
@@ -64,6 +64,7 @@ def music_recommendation(user_id, n=10):
     model_store.models_info["default_als"] = ModelInfo(
                     model_id="default",
                     params={"type": "ALS"},
+                    model_path="prepared_models/model_als.pkl"
                 )
     
     return list(res)
@@ -81,11 +82,13 @@ async def root():
     return {"message" : "Hi, User!"}
 
 
-@app.post("/predict")
+@app.post("/predict", response_model=PredictResponse)
 async def predict(user_id: int, n: int = 10):
     global matrix
+    user_type = 'existing'
 
     if user_id >= matrix.shape[0]:  # новый пользователь
+        user_type = "new"
         user_id = matrix.shape[0] - 1  # временное решение по определению нового пользователя
 
         top_10_songs = train["song_id"].value_counts().head(10).index
@@ -97,7 +100,7 @@ async def predict(user_id: int, n: int = 10):
 
         matrix = csr_matrix((new_data, new_indices, new_indptr), shape=(matrix.shape[0] + 1, matrix.shape[1]))
 
-    return ml_models["music_recommendation"](user_id, n)
+    return PredictResponse(recommendations=ml_models["music_recommendation"](user_id, n), user_type=user_type)
 
 
 def _train_model(params: FitRequest, model_id: str):
@@ -121,7 +124,7 @@ def _train_model(params: FitRequest, model_id: str):
         # logger.error(f"Training failed: {e}")
         return False
 
-@app.post("/fit", response_model=dict)
+@app.post("/fit", response_model=FitResponse, responses={500: {"model": ErrorResponse}})
 async def fit_model(request: FitRequest):
     # model_id = f"model_{datetime.now().strftime('%Y%m%d%H%M%S')}"
     model_id = str(uuid.uuid4())
@@ -149,10 +152,13 @@ async def fit_model(request: FitRequest):
 
 
     if not Path(f"users_models/{request.model_name}_{request.model_type}_{model_id}.pkl").exists():
-        return {
-            "status": "error",
-            "message": "Training failed"
-        }
+        # return {
+        #     "status": "error",
+        #     "message": "Training failed"
+        # }
+        return ErrorResponse(
+            detail="error, Training failed"
+        )
     
     with model_store.lock:
         model_store.models_info[model_id] = ModelInfo(
@@ -161,17 +167,16 @@ async def fit_model(request: FitRequest):
             model_path=f"users_models/{request.model_name}_{request.model_type}_{model_id}.pkl"
         )
 
-
-    return {
-        "status": "success",
-        "model_id": model_id,
-        "details": {
+    return FitResponse(
+        status="success",
+        model_id=model_id,
+        message="Model trained and saved",
+        details={
             "factors": request.factors,
             "iterations": request.iterations,
             "regularization": request.regularization
-        },
-        "message": "Model trained and saved"
-    }
+        }
+    )
 
 
 
@@ -183,7 +188,7 @@ async def get_models():
             for model_id, info in model_store.models_info.items()
         ]
 
-@app.post("/set", response_model=dict)
+@app.post("/set", response_model=SetResponse)
 async def set_model(model_id: str):
     with model_store.lock:
         if model_id not in model_store.models_info:
@@ -204,4 +209,7 @@ async def set_model(model_id: str):
 
         model_store.active_model_id = model_id
 
-    return {"status": "success", "active_model_id": model_id}
+    return SetResponse(
+        status="success",
+        active_model=model_id
+    )

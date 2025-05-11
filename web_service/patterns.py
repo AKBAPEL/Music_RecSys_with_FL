@@ -30,3 +30,8 @@ class ErrorResponse(BaseModel):
 class PredictResponse(BaseModel):
     recommendations: List[str]
     user_type: str
+    active_model_id: str
+
+class PredictRequest(BaseModel):
+    user_id: int
+    n: int = 10

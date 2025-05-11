@@ -19,7 +19,6 @@ TRAIN = f"../train.csv"
 train_df = pd.read_csv(TRAIN)
 
 
-ml_models = {}
 class ModelStore:
     def __init__(self):
         self.models: Dict[str, object] = {}
@@ -47,33 +46,24 @@ def get_als_data(train_df):
 
     matrix = csr_matrix((target, (user_ids, song_ids)), shape=(len(train['msno'].unique()), len(train['song_id'].unique())))
 
-    ml_models['le_song_id'] = le_song_id
     return matrix, le_msno, le_song_id, train
 
 matrix, le_msno, le_song_id, train = get_als_data(train_df=train_df)
 
-
-def music_recommendation(user_id, n=10):
-    with open("prepared_models/model_als.pkl", 'rb') as model_file:  # experiment-als модель
-        loaded_model = pickle.load(model_file)
-
-    recommendations = loaded_model.recommend(user_id, matrix[user_id], N=n)
-    res = le_song_id.inverse_transform(recommendations[0].tolist())
-
-    model_store.models["default_als"] = loaded_model
-    model_store.models_info["default_als"] = ModelInfo(
-                    model_id="default",
-                    params={"type": "ALS"},
-                    model_path="prepared_models/model_als.pkl"
-                )
-    
-    return list(res)
     
 @asynccontextmanager
 async def ml_lifespan_manager(app: FastAPI):
-    ml_models["music_recommendation"] = music_recommendation
+    with open("prepared_models/model_als.pkl", 'rb') as model_file:  # experiment-als модель
+        default_model = pickle.load(model_file)
+
+    model_store.models["default_als"] = default_model
+    model_store.models_info["default_als"] = ModelInfo(
+                    model_id="default_als",
+                    params={"type": "ALS"},
+                    model_path="prepared_models/model_als.pkl"
+    )
+    model_store.active_model_id = "default_als"
     yield
-    ml_models.clear()
 
 app = FastAPI(lifespan=ml_lifespan_manager)
 
@@ -81,26 +71,6 @@ app = FastAPI(lifespan=ml_lifespan_manager)
 async def root():
     return {"message" : "Hi, User!"}
 
-
-@app.post("/predict", response_model=PredictResponse)
-async def predict(user_id: int, n: int = 10):
-    global matrix
-    user_type = 'existing'
-
-    if user_id >= matrix.shape[0]:  # новый пользователь
-        user_type = "new"
-        user_id = matrix.shape[0] - 1  # временное решение по определению нового пользователя
-
-        top_10_songs = train["song_id"].value_counts().head(10).index
-        new_user_data = np.array(np.ones(len(top_10_songs)))
-        new_user_indices = np.array(top_10_songs)
-        new_data = np.concatenate([matrix.data, new_user_data])
-        new_indices = np.concatenate([matrix.indices, new_user_indices])
-        new_indptr = np.concatenate([matrix.indptr, [matrix.indptr[-1] + len(new_user_data)]])
-
-        matrix = csr_matrix((new_data, new_indices, new_indptr), shape=(matrix.shape[0] + 1, matrix.shape[1]))
-
-    return PredictResponse(recommendations=ml_models["music_recommendation"](user_id, n), user_type=user_type)
 
 
 def _train_model(params: FitRequest, model_id: str):
@@ -213,3 +183,26 @@ async def set_model(model_id: str):
         status="success",
         active_model=model_id
     )
+
+@app.post("/predict", response_model=PredictResponse)
+async def predict(user_id: int, n: int = 10):
+    global matrix
+    user_type = 'existing'
+
+    if user_id >= matrix.shape[0]:  # новый пользователь
+        user_type = "new"
+        user_id = matrix.shape[0] - 1  # временное решение по определению нового пользователя
+
+        top_10_songs = train["song_id"].value_counts().head(10).index
+        new_user_data = np.array(np.ones(len(top_10_songs)))
+        new_user_indices = np.array(top_10_songs)
+        new_data = np.concatenate([matrix.data, new_user_data])
+        new_indices = np.concatenate([matrix.indices, new_user_indices])
+        new_indptr = np.concatenate([matrix.indptr, [matrix.indptr[-1] + len(new_user_data)]])
+
+        matrix = csr_matrix((new_data, new_indices, new_indptr), shape=(matrix.shape[0] + 1, matrix.shape[1]))
+
+    recommendations = model_store.models[model_store.active_model_id].recommend(user_id, matrix[user_id], N=n) 
+    res = le_song_id.inverse_transform(recommendations[0].tolist())
+
+    return PredictResponse(recommendations=res, user_type=user_type, active_model_id=model_store.active_model_id)

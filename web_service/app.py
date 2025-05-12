@@ -145,10 +145,20 @@ with st.expander("Управление моделями"):
     if st.button("Set Active Model"):
         requests.post(f"{API_URL}/set", params={"model_id": selected_model})
         st.success("Model updated")
-# model_name: str
-#     model_type: str
-#     factors: int = 100
-#     iterations: int = 1 # 20
-#     regularization: float = 0.01
-#     alpha: float = 1.0
-    
+
+
+    st.subheader("Получить треки")
+    user_id = st.number_input("User ID", min_value=0, value=0)
+    n = st.number_input("Number of Recommendations", 5, 20, 10)
+    if st.button("Recommend"):
+        response = requests.post(
+            f"{API_URL}/predict",
+            params={"user_id": user_id, "n": n}
+        )
+        if response.status_code == 200:
+            recommendations = response.json()["recommendations"]
+            st.write("Top Recommendations:")
+            for i, song in enumerate(recommendations, 1):
+                st.write(f"{i}. Song ID: {song}")
+        else:
+            st.error("Error getting recommendations")

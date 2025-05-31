@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./web_service
+      dockerfile: Dockerfile.fastapi
+    container_name: backend  # Явное имя контейнера
+    networks:
+      - app-network
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/app/logs
+      - ./models:/app/models
+
+  frontend:
+    build:
+      context: ./web_service
+      dockerfile: Dockerfile.streamlit
+    container_name: frontend
+    networks:
+      - app-network
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+
+networks:
+  app-network:
+    driver: bridge

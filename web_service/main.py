@@ -15,7 +15,7 @@ import uuid
 from typing import List, Dict, Optional
 from patterns import FitRequest, ModelInfo, FitResponse, SetResponse, ErrorResponse, PredictResponse
 
-TRAIN = f"../train.csv"
+TRAIN = f"data/train_trunceted.csv"
 train_df = pd.read_csv(TRAIN)
 
 

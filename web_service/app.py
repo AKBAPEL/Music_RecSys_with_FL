@@ -10,12 +10,12 @@ from patterns import FitRequest
 st.set_page_config(layout="wide")
 st.title("Music Recommendation System")
 
-API_URL = " http://127.0.0.1:8000"
+API_URL = "http://backend:8000"
 
 def eda_demonstration(train: pd.DataFrame):
     st.header("Разведочный Анализ Данных")
     st.subheader("Train DataFrame", divider=True)
-    st.dataframe(data=train.head())
+    # st.dataframe(data=train.head())
 
     st.badge("Пропущенные значения", color="green")
     missing_values = train.isnull().sum()
@@ -108,7 +108,7 @@ with st.expander("Загрузить датасет"):
             st.error(f"Error loading file: {str(e)}")
 
 if train is None:
-    train = pd.read_csv("../train.csv")
+    train = pd.read_csv("data/train_truncated.csv")
     train['msno'] = train['msno'].astype(str)
 
 # EDA
@@ -162,3 +162,5 @@ with st.expander("Управление моделями"):
                 st.write(f"{i}. Song ID: {song}")
         else:
             st.error("Error getting recommendations")
+web_service/app.py
+

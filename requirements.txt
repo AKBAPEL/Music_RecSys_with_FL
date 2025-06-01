@@ -10,3 +10,8 @@ python-multipart
 seaborn
 pydantic
 implicit
+pre-commit
+black
+isort
+mypy
+flake8

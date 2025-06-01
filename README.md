@@ -23,20 +23,20 @@
 
 ```text
 Music_RecSys_with_FL/
-├── README.md                   
+├── README.md
 ├── report.pdf                  ← Финальный отчёт
-├── docker-compose.yml          ← Контейнеризация для backend + frontend  
-├── logs/                       
-├── web_service/                ← Backend + frontend 
-│   ├── Dockerfile.fastapi      ← Dockerfile для backend (FastAPI)  
-│   ├── Dockerfile.streamlit    ← Dockerfile для frontend (Streamlit)  
-│   ├── dockerfile              ← Альтернативный Dockerfile (не используется)  
-│   ├── requirements.txt       
+├── docker-compose.yml          ← Контейнеризация для backend + frontend
+├── logs/
+├── requirements.txt
+├── web_service/                ← Backend + frontend
+│   ├── Dockerfile.fastapi      ← Dockerfile для backend (FastAPI)
+│   ├── Dockerfile.streamlit    ← Dockerfile для frontend (Streamlit)
+│   ├── dockerfile              ← Альтернативный Dockerfile (не используется)
 │   ├── patterns.py             ← Pydantic-модели
 │   ├── main.py                 ← FastAPI-приложение
-│   ├── app.py                  ← Streamlit-приложение 
-│   ├── data/                   ← Исходные CSV-данные для EDA / обучения  
-│   │   └── train_truncated.csv ← Неполный датасет для демонстрации и обучения  
+│   ├── app.py                  ← Streamlit-приложение
+│   ├── data/                   ← Исходные CSV-данные для EDA / обучения
+│   │   └── train_truncated.csv ← Неполный датасет для демонстрации и обучения
 │   ├── prepared_models/        ← Папка с предварительно обученными моделями
 │   ├── users_models/           ← Папка с моделями, которые сделали пользователи
 └── .dockerignore
@@ -163,7 +163,7 @@ Music_RecSys_with_FL/
 ---
 
 <!-- ## 6. Установка и запуск -->
-<!-- 
+<!--
 ### 6.1. Предварительные требования
 
 * **Git** (>= 2.23)

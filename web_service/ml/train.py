@@ -1,8 +1,11 @@
+import logging
 import pickle
 import uuid
 
 from implicit.als import AlternatingLeastSquares
 from scipy.sparse import csr_matrix
+
+logger = logging.getLogger(__name__)
 
 
 def train_als_model(
@@ -20,6 +23,8 @@ def train_als_model(
         random_state=42,
     )
     model.fit(interactions)
+
+    logger.info("finished training")
     return model
 
 
@@ -28,4 +33,5 @@ def save_model(model: AlternatingLeastSquares, directory: str, model_name: str) 
     path = f"{directory}/{model_id}.pkl"
     with open(path, "wb") as f:
         pickle.dump(model, f)
+    logger.info(f"model saved to {path}")
     return path

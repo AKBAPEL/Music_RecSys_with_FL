@@ -29,6 +29,14 @@ Music_RecSys_with_FL/
 ├── logs/
 ├── requirements.txt
 ├── web_service/                ← Backend + frontend
+│   ├── ml/               # код работы с ML (обучение, предобработка, inference)
+│   │   ├── __init__.py
+│   │   ├── preprocess.py # функции предобработки данных
+│   │   ├── train.py      # функции обучения моделей
+│   │   └── inference.py  # функции для предсказаний
+│   ├── store/            # код для хранения и управления моделями
+│   │   ├── __init__.py
+│   │   └── model_store.py # класс ModelStore, управление маппингом model_id↔модель
 │   ├── Dockerfile.fastapi      ← Dockerfile для backend (FastAPI)
 │   ├── Dockerfile.streamlit    ← Dockerfile для frontend (Streamlit)
 │   ├── dockerfile              ← Альтернативный Dockerfile (не используется)

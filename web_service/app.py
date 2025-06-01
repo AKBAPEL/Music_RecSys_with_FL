@@ -1,5 +1,4 @@
-# import logging
-# from logging.handlers import RotatingFileHandler
+import logging
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -7,6 +6,19 @@ import requests
 import seaborn as sns
 import streamlit as st
 
+logger = logging.getLogger("frontend")
+logger.setLevel(logging.INFO)
+file_handler = logging.handlers.RotatingFileHandler(
+    filename="/app/logs/frontend.log",
+    maxBytes=10 * 1024 * 1024,
+    backupCount=5,
+    encoding="utf-8",
+)
+formatter = logging.Formatter(
+    "%(asctime)s %(levelname)s %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 st.set_page_config(layout="wide")
 st.title("Music Recommendation System")
 
@@ -136,6 +148,7 @@ with st.expander("Управление моделями"):
         "alpha": st.number_input("Alpha", 0.0, 1.0, 0.01),
     }
     if st.button("Обучить модель"):
+        logger.info("Sending fit request: %s", params)
         response = requests.post(
             f"{API_URL}/fit",
             json={"model_name": model_name, "model_type": model_type, **params},
@@ -146,6 +159,7 @@ with st.expander("Управление моделями"):
     models = requests.get(f"{API_URL}/models").json()
     selected_model = st.selectbox("Active Model", [m["model_id"] for m in models])
     if st.button("Set Active Model"):
+        logger.info("Setting active model: %s", selected_model)
         requests.post(f"{API_URL}/set", params={"model_id": selected_model})
         st.success("Model updated")
 
@@ -158,6 +172,7 @@ with st.expander("Управление моделями"):
         )
         if response.status_code == 200:
             recommendations = response.json()["recommendations"]
+            logger.info("Received recommendations: %s", recommendations)
             st.write("Top Recommendations:")
             for i, song in enumerate(recommendations, 1):
                 st.write(f"{i}. Song ID: {song}")

@@ -3,8 +3,8 @@ version: '3.8'
 services:
   backend:
     build:
-      context: ./web_service
-      dockerfile: Dockerfile.fastapi
+      context: .
+      dockerfile: web_service/Dockerfile.fastapi
     container_name: backend
     networks:
       - app-network
@@ -16,8 +16,8 @@ services:
 
   frontend:
     build:
-      context: ./web_service
-      dockerfile: Dockerfile.streamlit
+      context: .
+      dockerfile: web_service/Dockerfile.streamlit
     container_name: frontend
     networks:
       - app-network

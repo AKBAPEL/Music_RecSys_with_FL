@@ -5,7 +5,7 @@ services:
     build:
       context: ./web_service
       dockerfile: Dockerfile.fastapi
-    container_name: backend  # Явное имя контейнера
+    container_name: backend
     networks:
       - app-network
     ports:

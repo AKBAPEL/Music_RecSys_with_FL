@@ -1,0 +1,26 @@
+# Используем базовый образ с поддержкой сборки
+FROM python:3.9-slim-buster
+
+# Устанавливаем системные зависимости
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    libopenblas-dev \
+    libgomp1 \
+    build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Копируем зависимости первыми для кеширования
+COPY requirements.txt .
+
+# Устанавливаем Python-зависимости
+RUN pip install --no-cache-dir -U pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Копируем остальные файлы
+COPY . .
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

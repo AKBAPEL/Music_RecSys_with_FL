@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+scikit-learn
+pandas
+numpy
+scipy
+streamlit
+requests
+python-multipart
+seaborn
+pydantic
+implicit
+pre-commit
+black
+isort
+mypy
+flake8

@@ -1,0 +1,49 @@
+# Byte-compiled Python files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# Distribution artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test and coverage
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.nox/
+.cache/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+notebooks/*.nbconvert.ipynb
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Data and outputs (if any)
+data/
+outputs/
+plots/
+
+# .pre-commit-config.yaml

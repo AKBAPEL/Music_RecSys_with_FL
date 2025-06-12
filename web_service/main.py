@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from fastapi import FastAPI, HTTPException, status
+from ml.federated import federated_training
 from ml.inference import get_recommendations
 from ml.preprocess import build_interaction_matrix, load_raw_data
 from ml.train import train_als_model
@@ -164,3 +165,46 @@ async def predict(user_id: int, n: int = 10) -> PredictResponse:
         user_type=user_type,
         active_model_id=model_store.active_model_id,
     )
+
+
+@app.post(
+    "/federate",
+    response_model=ModelInfo,
+    responses={500: {"model": ErrorResponse}},
+)
+async def federate() -> ModelInfo:
+    """
+    Ручка для запуска федеративного обучения на текущем датасете.
+    """
+    logger.info("Federation process started")
+    try:
+        # Запускаем federated learning на полном наборе processed_df
+        new_model = federated_training(
+            df=processed_df,
+            num_clients=5,
+            local_epochs=3,
+            agg_rounds=10,
+            factors=50,
+            regularization=0.01,
+        )
+
+        model_id = f"fed_{uuid.uuid4()}"
+        model_path = f"users_models/{model_id}.pkl"
+
+        with open(model_path, "wb") as f:
+            pickle.dump(new_model, f)
+
+        info = ModelInfo(
+            model_id=model_id,
+            params={"type": "federated_als"},
+            model_path=model_path,
+        )
+        model_store.add_model(model_id, info, model_path)
+        model_store.set_active(model_id)
+
+        logger.info("Federated model trained and set active: %s", model_id)
+        return info
+
+    except Exception as e:
+        logger.error("Federation failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))

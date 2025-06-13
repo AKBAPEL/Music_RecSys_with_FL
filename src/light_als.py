@@ -7,21 +7,17 @@ Original file is located at
     https://colab.research.google.com/drive/1_69vK_3qLPskq2aYUb5ypz7GAyFTz1PJ
 """
 
-!pip install implicit
-
-from implicit.als import AlternatingLeastSquares
-from sklearn.preprocessing import LabelEncoder
-from scipy.sparse import csr_matrix
-from tqdm import tqdm
-import pickle
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import precision_score, recall_score
-from sklearn.model_selection import train_test_split
-
 from google.colab import drive
-drive.mount('/content/drive')
+from implicit.als import AlternatingLeastSquares
+from scipy.sparse import csr_matrix
+from sklearn.metrics import precision_score, recall_score, roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from tqdm import tqdm
+
+drive.mount("/content/drive")
 
 FACTORS = 50
 REGULARIZATION = 0.01
@@ -39,7 +35,14 @@ le_song_id = LabelEncoder()
 le_msno.fit(train_df["msno"])
 le_song_id.fit(train_df["song_id"])
 
-train = pd.DataFrame({"msno": le_msno.transform(train_df["msno"].values), "song_id": le_song_id.transform(train_df["song_id"].values), "target": train_df["target"]})
+train = pd.DataFrame(
+    {
+        "msno": le_msno.transform(train_df["msno"].values),
+        "song_id": le_song_id.transform(train_df["song_id"].values),
+        "target": train_df["target"],
+    }
+)
+
 
 class LightweightClient:
     def __init__(self, client_id: int, user_vector: np.ndarray):
@@ -52,18 +55,23 @@ class LightweightClient:
         self.user_vector = user_vector.copy()  # Только свои факторы
         self._interactions = None  # CSR матрица будет инициализирована позже
 
-    def init_interactions(self, item_ids: np.ndarray, targets: np.ndarray, n_items: int):
+    def init_interactions(
+        self, item_ids: np.ndarray, targets: np.ndarray, n_items: int
+    ):
         """Инициализирует CSR матрицу взаимодействий один раз"""
         self._interactions = csr_matrix(
-            (targets, (np.zeros_like(item_ids), item_ids)),
-            shape=(1, n_items)
+            (targets, (np.zeros_like(item_ids), item_ids)), shape=(1, n_items)
         )
 
-    def local_update(self, global_item_factors: np.ndarray, epsilon: float = None) -> np.ndarray:
+    def local_update(
+        self, global_item_factors: np.ndarray, epsilon: float = None
+    ) -> np.ndarray:
         """Возвращает только обновленный вектор пользователя"""
-        temp_model = AlternatingLeastSquares(factors=self.user_vector.shape[0],
-                                      regularization=REGULARIZATION,
-                                      use_gpu=False)
+        temp_model = AlternatingLeastSquares(
+            factors=self.user_vector.shape[0],
+            regularization=REGULARIZATION,
+            use_gpu=False,
+        )
         temp_model.item_factors = global_item_factors
         temp_model.user_factors = np.expand_dims(self.user_vector, axis=0)
 
@@ -71,25 +79,27 @@ class LightweightClient:
         updated_vector = temp_model.user_factors[0].copy()
 
         if epsilon is not None:
-            noise = np.random.uniform(low=-epsilon, high=epsilon, size=updated_vector.shape)
+            noise = np.random.uniform(
+                low=-epsilon, high=epsilon, size=updated_vector.shape
+            )
             updated_vector += noise
 
         return updated_vector
 
+
 """# Метрики качества модели, обученной на полных данных"""
 
-full_data_model = AlternatingLeastSquares(factors=FACTORS,
-                                      regularization=REGULARIZATION,
-                                      use_gpu=False)
+full_data_model = AlternatingLeastSquares(
+    factors=FACTORS, regularization=REGULARIZATION, use_gpu=False
+)
 
-user_item = csr_matrix(
-            (train['target'],
-            (train['msno'], train['song_id']))
-        )
+user_item = csr_matrix((train["target"], (train["msno"], train["song_id"])))
 
 full_data_model.fit(user_item)
 
-train_data, test_data = train_test_split(train, test_size=0.2, random_state=42, shuffle=True)
+train_data, test_data = train_test_split(
+    train, test_size=0.2, random_state=42, shuffle=True
+)
 
 test_users = test_data["msno"]
 test_items = test_data["song_id"]
@@ -99,8 +109,8 @@ song_factors = full_data_model.item_factors[test_items]
 predicted_scores = np.sum(user_factors * song_factors, axis=1)
 
 auc = roc_auc_score(test_data["target"], predicted_scores)
-precision = precision_score(test_data['target'], predicted_scores>0.6)
-recall = recall_score(test_data['target'], predicted_scores>0.6)
+precision = precision_score(test_data["target"], predicted_scores > 0.6)
+recall = recall_score(test_data["target"], predicted_scores > 0.6)
 print("AUC: ", auc)
 print("precision: ", precision)
 print("recall: ", recall)
@@ -110,14 +120,13 @@ global_data = train.drop(private_data.index).sort_values(by="msno")
 
 """# Дообучение без добавления шума"""
 
-global_model = AlternatingLeastSquares(factors=FACTORS,
-                                      regularization=REGULARIZATION,
-                                      use_gpu=False)
+global_model = AlternatingLeastSquares(
+    factors=FACTORS, regularization=REGULARIZATION, use_gpu=False
+)
 
 user_item = csr_matrix(
-            (global_data['target'],
-            (global_data['msno'], global_data['song_id']))
-        )
+    (global_data["target"], (global_data["msno"], global_data["song_id"]))
+)
 
 global_model.fit(user_item)
 
@@ -130,20 +139,22 @@ for cid in tqdm(private_data["msno"].unique()):
     client.init_interactions(
         item_ids=user_data["song_id"].values,
         targets=user_data["target"].values,
-        n_items=global_model.item_factors.shape[0]
+        n_items=global_model.item_factors.shape[0],
     )
     clients.append(client)
 
 updated_vectors = []
 
-for client in tqdm(clients[:int(len(clients)*0.3)]):
+for client in tqdm(clients[: int(len(clients) * 0.3)]):
     new_vector = client.local_update(global_model.item_factors)
     updated_vectors.append((client.id, new_vector))
 
 for cid, vec in updated_vectors:
     global_model.user_factors[cid] = vec
 
-train_data, test_data = train_test_split(global_data, test_size=0.3, random_state=42, shuffle=True)
+train_data, test_data = train_test_split(
+    global_data, test_size=0.3, random_state=42, shuffle=True
+)
 
 test_users = test_data["msno"]
 test_items = test_data["song_id"]
@@ -153,22 +164,21 @@ song_factors = global_model.item_factors[test_items]
 predicted_scores = np.sum(user_factors * song_factors, axis=1)
 
 auc = roc_auc_score(test_data["target"], predicted_scores)
-precision = precision_score(test_data['target'], predicted_scores>0.6)
-recall = recall_score(test_data['target'], predicted_scores>0.6)
+precision = precision_score(test_data["target"], predicted_scores > 0.6)
+recall = recall_score(test_data["target"], predicted_scores > 0.6)
 print("AUC: ", auc)
 print("precision: ", precision)
 print("recall: ", recall)
 
 """# Дообучение с добавлением шума"""
 
-global_model = AlternatingLeastSquares(factors=FACTORS,
-                                      regularization=REGULARIZATION,
-                                      use_gpu=False)
+global_model = AlternatingLeastSquares(
+    factors=FACTORS, regularization=REGULARIZATION, use_gpu=False
+)
 
 user_item = csr_matrix(
-            (global_data['target'],
-            (global_data['msno'], global_data['song_id']))
-        )
+    (global_data["target"], (global_data["msno"], global_data["song_id"]))
+)
 
 global_model.fit(user_item)
 
@@ -181,20 +191,22 @@ for cid in tqdm(private_data["msno"].unique()):
     client.init_interactions(
         item_ids=user_data["song_id"].values,
         targets=user_data["target"].values,
-        n_items=global_model.item_factors.shape[0]
+        n_items=global_model.item_factors.shape[0],
     )
     clients.append(client)
 
 updated_vectors = []
 
-for client in tqdm(clients[:int(len(clients)*0.3)]):
-    new_vector = client.local_update(global_model.item_factors, epsilon=5*1e-1)
+for client in tqdm(clients[: int(len(clients) * 0.3)]):
+    new_vector = client.local_update(global_model.item_factors, epsilon=5 * 1e-1)
     updated_vectors.append((client.id, new_vector))
 
 for cid, vec in updated_vectors:
     global_model.user_factors[cid] = vec
 
-train_data, test_data = train_test_split(global_data, test_size=0.3, random_state=42, shuffle=True)
+train_data, test_data = train_test_split(
+    global_data, test_size=0.3, random_state=42, shuffle=True
+)
 
 test_users = test_data["msno"]
 test_items = test_data["song_id"]
@@ -204,8 +216,8 @@ song_factors = global_model.item_factors[test_items]
 predicted_scores = np.sum(user_factors * song_factors, axis=1)
 
 auc = roc_auc_score(test_data["target"], predicted_scores)
-precision = precision_score(test_data['target'], predicted_scores>0.6)
-recall = recall_score(test_data['target'], predicted_scores>0.6)
+precision = precision_score(test_data["target"], predicted_scores > 0.6)
+recall = recall_score(test_data["target"], predicted_scores > 0.6)
 print("AUC: ", auc)
 print("precision: ", precision)
 print("recall: ", recall)

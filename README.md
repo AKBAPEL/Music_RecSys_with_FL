@@ -19,35 +19,57 @@
 
 ---
 
+
+
 ## 3. Структура репозитория
 
 ```text
 Music_RecSys_with_FL/
+├── .dockerignore
+├── .gitignore
+├── Dockerfile.fastapi
+├── Dockerfile.streamlit
 ├── README.md
-├── report.pdf                  ← Финальный отчёт
-├── docker-compose.yml          ← Контейнеризация для backend + frontend
-├── logs/
-├── requirements.txt
-├── web_service/                ← Backend + frontend
-│   ├── ml/               # код работы с ML (обучение, предобработка, inference)
-│   │   ├── __init__.py
-│   │   ├── preprocess.py # функции предобработки данных
-│   │   ├── train.py      # функции обучения моделей
-│   │   └── inference.py  # функции для предсказаний
-│   ├── store/            # код для хранения и управления моделями
-│   │   ├── __init__.py
-│   │   └── model_store.py # класс ModelStore, управление маппингом model_id↔модель
-│   ├── Dockerfile.fastapi      ← Dockerfile для backend (FastAPI)
-│   ├── Dockerfile.streamlit    ← Dockerfile для frontend (Streamlit)
-│   ├── dockerfile              ← Альтернативный Dockerfile (не используется)
-│   ├── patterns.py             ← Pydantic-модели
-│   ├── main.py                 ← FastAPI-приложение
-│   ├── app.py                  ← Streamlit-приложение
-│   ├── data/                   ← Исходные CSV-данные для EDA / обучения
-│   │   └── train_truncated.csv ← Неполный датасет для демонстрации и обучения
-│   ├── prepared_models/        ← Папка с предварительно обученными моделями
-│   ├── users_models/           ← Папка с моделями, которые сделали пользователи
-└── .dockerignore
+├── baselines/               ← Базовые решения и эксперименты
+│   ├── baseline.ipynb
+│   ├── baseline.md
+│   ├── experiment_als.ipynb
+│   ├── experiment_ranking_by_logreg.ipynb
+│   ├── experiments.md
+│   ├── metric-catboost-baseline.ipynb
+│   └── new_baseline.ipynb
+├── dataset.md               ← Описание датасета
+├── docker-compose.yml       ← Конфигурация Docker
+├── dockerfile               ← Альтернативный Dockerfile
+├── logs/                    ← Директория для логов
+├── models/                  ← Обученные модели
+├── notebooks/               ← Аналитические ноутбуки
+│   ├── improving baseline
+│   ├── members_eda.ipynb
+│   ├── songs_EDA.ipynb
+│   └── train_EDA.ipynb
+├── requirements.txt         ← Зависимости Python
+└── web_service/             ← Веб-сервис (backend + frontend)
+    ├── Dockerfile.fastapi
+    ├── Dockerfile.streamlit
+    ├── __init__.py
+    ├── app.py               ← Streamlit frontend
+    ├── data/                ← Данные для демонстрации
+    │   └── train_truncated.csv
+    ├── dockerfile
+    ├── main.py              ← FastAPI backend
+    ├── ml/                  ← Модуль машинного обучения
+    │   ├── __init__.py
+    │   ├── federated.py     ← Реализация федеративного обучения
+    │   ├── inference.py     ← Логика предсказаний
+    │   ├── preprocess.py    ← Предобработка данных
+    │   └── train.py         ← Обучение моделей
+    ├── patterns.py          ← Pydantic схемы
+    ├── prepared_models/     ← Предобученные модели
+    ├── store/               ← Хранилище моделей
+    │   ├── __init__.py
+    │   └── model_store.py
+    └── users_models/        ← Пользовательские модели
 ```
 
 ---
@@ -169,79 +191,6 @@ Music_RecSys_with_FL/
 * Сетевой драйвер: **bridge** (сервисам `backend` и `frontend` разрешён доступ друг к другу по DNS-именам)
 
 ---
-
-<!-- ## 6. Установка и запуск -->
-<!--
-### 6.1. Предварительные требования
-
-* **Git** (>= 2.23)
-* **Docker** (>= 20.10)
-* **Docker Compose** (v2)
-* Интернет-соединение (для скачивания образов и Python-пакетов) -->
-
-<!-- ### 6.1. Клонирование репозитория
-
-```bash
-git clone https://github.com/<username>/Music_RecSys_with_FL.git
-cd Music_RecSys_with_FL
-```
-
-### 6.2. Сборка образов и запуск (Docker Compose)
-
-```bash
-docker-compose up --build
-```
----
-
-### 6.3. Запуск и проверка API
-
-После старта:
-
-1. **Документация Swagger**:
-   Откройте в браузере → `http://localhost:8000/docs`
-   Здесь вы увидите все эндпоинты (`/fit`, `/models`, `/set`, `/predict`)
-
-2. **Тест «ping»** (проверка работоспособности сервера):
-
-   ```bash
-   curl http://localhost:8000/models
-   ```
-
-   Ожидаемый ответ:
-
-   ```json
-   []
-   ```
-
----
-
-### 6.4. Запуск и проверка Streamlit-приложения
-
-После старта контейнеров зайдите в браузере по адресу → `http://localhost:8501`
-
-* Должна появиться главная страница с заголовком **«Music Recommendation System»**
-* Раздел **«Загрузить свой CSV»**:
-
-  * При клике «Browse files» можно загрузить свой `.csv` в формате (с колонками `msno`, `source_type`, `source_system_tab`, `target`).
-  * Если не загружать — подгрузится дефолтный `web_service/data/train_truncated.csv`.
-* Раздел **«Разведочный анализ данных»**:
-
-  * Появится сериализованный DataFrame (первая колонка JSON-строк).
-  * Блок «Пример: как распарсить JSON обратно» покажет JSON-объект, затем Python-словарь и вновь созданный `TrainRecord`.
-* Раздел **«Управление моделями»**:
-
-  1. Укажите имя модели и выберите гиперпараметры.
-  2. Нажмите **«Обучить модель»** → запрос уйдёт на бэкенд, вернётся JSON со статусом.
-  3. Список **«Available Models»** подгружается из `GET /models`.
-  4. Можно выбрать модель из `selectbox`, нажать **«Set Active Model»**, и получить подтверждение.
-* Раздел **«Получить треки»**:
-
-  1. Введите `user_id` и количество рекомендаций `n`.
-  2. Нажмите **«Recommend»** → приложение отобразит массив рекомендаций, полученных из `POST /predict`.
-
----
-
---- -->
 
 ## 6. Инструкция по использованию
 

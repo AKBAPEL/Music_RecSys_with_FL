@@ -25,6 +25,8 @@ services:
       - "8501:8501"
     depends_on:
       - backend
+    volumes:
+      - ./logs:/app/logs
 
 networks:
   app-network:

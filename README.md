@@ -212,4 +212,4 @@ Music_RecSys_with_FL/
 
 ---
 
-https://docs.google.com/presentation/d/1ONfOWTdt6rwxtPwURvoFkH-_6j8t940mqe6YsjxwtEM/edit?slide=id.p#slide=id.p[Презентация]
+[Презентация](https://docs.google.com/presentation/d/1ONfOWTdt6rwxtPwURvoFkH-_6j8t940mqe6YsjxwtEM/edit?slide=id.p#slide=id.p)
